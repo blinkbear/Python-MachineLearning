@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../DecesionTree/.idea/DecesionTree.iml" filepath="$PROJECT_DIR$/../DecesionTree/.idea/DecesionTree.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Python-MachineLearning.iml" filepath="$PROJECT_DIR$/.idea/Python-MachineLearning.iml" />
     </modules>
   </component>
 </project>

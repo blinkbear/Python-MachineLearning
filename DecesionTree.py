@@ -261,9 +261,9 @@ def run(train_file, test_file):
     store_tree(decesion_tree, 'decesiontree')
     mean_values = get_means(train_dataset)
     test_dataset, test_features = format_data(test_file)
-    print test_dataset,test_features
     n = len(test_dataset)
     correct = 0
+    print decesion_tree
     for test_data in test_dataset:
         label = classify(decesion_tree, test_features,test_data,mean_values)
         if label == test_data[-1]:
