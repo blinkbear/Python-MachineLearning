@@ -11,8 +11,8 @@ def get_labels(train_file):
     :param train_file:
     :return:
     '''
-    labels = [];
-    for index, line in enumerate(open(train_file, 'rU').readline()):
+    labels = []
+    for line in open(train_file):
         label = line.strip().split(',')[-1]
         labels.append(label)
     return labels
@@ -25,14 +25,13 @@ def format_data(dataset_file):
     '''
     j = 0
     dataset = []
-    for index, line in enumerate(open(dataset_file, 'rU').readlines()):
+    for line in open(dataset_file, 'rU'):
         line = line.strip()
         j += 1
         fea_and_label = line.split(',')
         dataset.append(
             [float(fea_and_label[i]) for i in range(len(fea_and_label) - 1)] + [fea_and_label[len(fea_and_label) - 1]])
     features = ['X_Minimum', 'X_Maximum', 'Y_Minimum', 'Y_Maximum', 'Pixels_Areas', 'X_Perimeter', 'Y_Perimeter', 'Sum_of_Luminosity', 'Minimum_of_Luminosity', 'Maximum_of_Luminosity', 'Length_of_Conveyer', 'TypeOfSteel_A300', 'TypeOfSteel_A400', 'Steel_Plate_Thickness', 'Edges_Index', 'Empty_Index', 'Square_Index', 'Outside_X_Index', 'Edges_X_Index', 'Edges_Y_Index', 'Outside_Global_Index', 'LogOfAreas', 'Log_X_Index', 'Log_Y_Index', 'Orientation_Index', 'Luminosity_Index', 'SigmoidOfAreas']
-    print j
     return dataset, features
 
 
@@ -72,14 +71,11 @@ def cal_entropy(dataset):
     :param dataset:
     :return:
     '''
-    n=len(dataset)
+    n = len(dataset)
     label_count = {}
     for data in dataset:
         label = data[-1]
-        if label_count.has_key(label):
-            label_count[label] += 1
-        else:
-            label_count[label] = 1
+        label_count[label] = label_count.get(label, 0) + 1
     entropy = 0
     for label in label_count:
         prob = float(label_count[label])/n
@@ -101,8 +97,7 @@ def cal_info_gain(dataset, feature_index, base_entropy):
     datasets = []
     for data in dataset:
         datasets.append(data[0:26])
-    mean_value = mean(datasets, axis=0)[feature_index] #计算制定特征的所有数据集值的平均值
-    # print mean_value
+    mean_value = mean(datasets, axis=0)[feature_index] #计算指定特征的所有数据集值的平均值
     dataset_less = []
     dataset_greater = []
     for data in dataset:
@@ -112,7 +107,6 @@ def cal_info_gain(dataset, feature_index, base_entropy):
             dataset_less.append(data)
     #条件熵 H(D/F)
     condition_entropy = float(len(dataset_less))/len(dataset)*cal_entropy(dataset_less) + float(len(dataset_greater))/len(dataset)*cal_entropy(dataset_greater)
-    # print 'info_gain:', base_entropy - condition_entropy
     return base_entropy - condition_entropy
 
 
@@ -121,10 +115,8 @@ def cal_info_gain_ratio(dataset, feature_index):
     	计算信息增益比  gr(D,F) = g(D,F)/H(D)
     	'''
     base_entropy = cal_entropy(dataset)
-    '''
     if base_entropy == 0:
         return 1
-    '''
     info_gain = cal_info_gain(dataset, feature_index, base_entropy)
     info_gain_ratio = info_gain / base_entropy
     return info_gain_ratio
@@ -145,6 +137,7 @@ def choose_best_fea_to_split(dataset, features):
        if info_gain_ratio > max_info_gain_ratio:
            max_info_gain_ratio = info_gain_ratio
            split_fea_index = i
+
    return split_fea_index
 
 
@@ -232,7 +225,6 @@ def classify(decesion_tree, features, test_data, mean_values):
     '''
     first_fea = decesion_tree.keys()[0]
     fea_index = features.index(first_fea)
-    print
     if test_data[fea_index] <= mean_values[fea_index]:
         sub_tree = decesion_tree[first_fea]['<=']
         if type(sub_tree) == dict:
@@ -265,10 +257,11 @@ def run(train_file, test_file):
     labels = get_labels(train_file)
     train_dataset, train_features = format_data(train_file)
     decesion_tree = build_tree(train_dataset, labels, train_features)
-    print 'decesion_tree:', decesion_tree
+    # print 'decesion_tree:', decesion_tree
     store_tree(decesion_tree, 'decesiontree')
     mean_values = get_means(train_dataset)
     test_dataset, test_features = format_data(test_file)
+    print test_dataset,test_features
     n = len(test_dataset)
     correct = 0
     for test_data in test_dataset:
@@ -276,6 +269,7 @@ def run(train_file, test_file):
         if label == test_data[-1]:
             correct += 1
     print '准确率：', correct/float(n)
+
 
 
 if __name__ == '__main__':
