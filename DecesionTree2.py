@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-
 from numpy import *
 import numpy as np
 import pandas as pd
 from math import log
 import operator
-import copy
 import re
-
 
 # 计算数据集的基尼指数
 def calcGini(dataSet):
@@ -42,7 +39,6 @@ def splitDataSet(dataSet, axis, value):
 # 决定是划分出小于value的数据样本还是大于value的数据样本集
 def splitContinuousDataSet(dataSet, axis, value, direction):
     retDataSet = []
-    print axis
     for featVec in dataSet:
         if direction == 0:
             if featVec[axis] > value:
@@ -59,11 +55,10 @@ def splitContinuousDataSet(dataSet, axis, value, direction):
 
 # 选择最好的数据集划分方式
 def chooseBestFeatureToSplit(dataSet, labels):
-    numFeatures = len(dataSet[0])-1
-    bestGiniIndex = 10000000.0
+    numFeatures = len(dataSet[0]) - 1
+    bestGiniIndex = 100000.0
     bestFeature = -1
     bestSplitDict = {}
-    print numFeatures
     for i in range(numFeatures):
         featList = [example[i] for example in dataSet]
         # 对连续型特征进行处理
@@ -72,9 +67,9 @@ def chooseBestFeatureToSplit(dataSet, labels):
             sortfeatList = sorted(featList)
             splitList = []
             for j in range(len(sortfeatList) - 1):
-                splitList.append((sortfeatList[j] + sortfeatList[j + 1]) / 2)
+                splitList.append((sortfeatList[j] + sortfeatList[j + 1]) / 2.0)
 
-            bestSplitGini = 1000000
+            bestSplitGini = 10000
             slen = len(splitList)
             # 求用第j个候选划分点划分时，得到的信息熵，并记录最佳划分点
             for j in range(slen):
@@ -89,11 +84,11 @@ def chooseBestFeatureToSplit(dataSet, labels):
                 if newGiniIndex < bestSplitGini:
                     bestSplitGini = newGiniIndex
                     bestSplit = j
-            # 用字典记录当前特征的最佳划分点
+                    # 用字典记录当前特征的最佳划分点
             bestSplitDict[labels[i]] = splitList[bestSplit]
 
             GiniIndex = bestSplitGini
-        # 对离散型特征进行处理
+            # 对离散型特征进行处理
         else:
             uniqueVals = set(featList)
             newGiniIndex = 0.0
@@ -106,7 +101,7 @@ def chooseBestFeatureToSplit(dataSet, labels):
         if GiniIndex < bestGiniIndex:
             bestGiniIndex = GiniIndex
             bestFeature = i
-    # 若当前节点的最佳划分特征为连续特征，则将其以之前记录的划分点为界进行二值化处理
+            # 若当前节点的最佳划分特征为连续特征，则将其以之前记录的划分点为界进行二值化处理
     # 即是否小于等于bestSplitValue
     if type(dataSet[0][bestFeature]).__name__ == 'float' or type(dataSet[0][bestFeature]).__name__ == 'int':
         bestSplitValue = bestSplitDict[labels[bestFeature]]
@@ -129,67 +124,13 @@ def majorityCnt(classList):
     return max(classCount)
 
 
-def classify(inputTree,featLabels,testVec):
-    firstStr=inputTree.keys()[0]
-    if '<=' in firstStr:
-        featvalue=float(re.compile("(<=.+)").search(firstStr).group()[2:])
-        featkey=re.compile("(.+<=)").search(firstStr).group()[:-2]
-        secondDict=inputTree[firstStr]
-        featIndex=featLabels.index(featkey)
-        if testVec[featIndex]<=featvalue:
-            judge=1
-        else:
-            judge=0
-        for key in secondDict.keys():
-            if judge==int(key):
-                if type(secondDict[key]).__name__=='dict':
-                    classLabel=classify(secondDict[key],featLabels,testVec)
-                else:
-                    classLabel=secondDict[key]
-    else:
-        secondDict=inputTree[firstStr]
-        featIndex=featLabels.index(firstStr)
-        for key in secondDict.keys():
-            if testVec[featIndex]==key:
-                if type(secondDict[key]).__name__=='dict':
-                    classLabel=classify(secondDict[key],featLabels,testVec)
-                else:
-                    classLabel=secondDict[key]
-    return classLabel
-
-def testing(myTree, data_test, labels):
-    error = 0.0
-    for i in range(len(data_test)):
-        if classify(myTree, labels, data_test[i]) != data_test[i][-1]:
-            error += 1
-    print 'myTree %d' % error
-    return float(error)
-
-
-def testingMajor(major, data_test):
-    error = 0.0
-    for i in range(len(data_test)):
-        if major != data_test[i][-1]:
-            error += 1
-    print 'major %d' % error
-    return float(error)
-
 # 主程序，递归产生决策树
 def createTree(dataSet, labels, data_full, labels_full):
-    '''
-
-    :param dataSet: 数据集
-    :param labels:  属性名
-    :param data_full: 完整的数据集
-    :param labels_full: 完整的属性名
-    :return: 树
-    '''
-    classList = [example[-1] for example in dataSet] #取出最后一列的labels
+    classList = [example[-1] for example in dataSet]
     if classList.count(classList[0]) == len(classList):
         return classList[0]
     if len(dataSet[0]) == 1:
         return majorityCnt(classList)
-    temp_labels=copy.deepcopy(labels)
     bestFeat = chooseBestFeatureToSplit(dataSet, labels)
     bestFeatLabel = labels[bestFeat]
     myTree = {bestFeatLabel: {}}
@@ -210,22 +151,89 @@ def createTree(dataSet, labels, data_full, labels_full):
     if type(dataSet[0][bestFeat]).__name__ == 'str':
         for value in uniqueValsFull:
             myTree[bestFeatLabel][value] = majorityCnt(classList)
-    if testing(myTree, data_test, temp_labels) < testingMajor(majorityCnt(classList), data_test):
-        return myTree
+    return myTree
+
+
+def classify(inputTree, featLabels, testVec):
+    firstStr = inputTree.keys()[0]
+    if '<=' in firstStr:
+        featvalue = float(re.compile("(<=.+)").search(firstStr).group()[2:])
+        featkey = re.compile("(.+<=)").search(firstStr).group()[:-2]
+        secondDict = inputTree[firstStr]
+        featIndex = featLabels.index(featkey)
+        if testVec[featIndex] <= featvalue:
+            judge = 1
+        else:
+            judge = 0
+        for key in secondDict.keys():
+            if judge == int(key):
+                if type(secondDict[key]).__name__ == 'dict':
+                    classLabel = classify(secondDict[key], featLabels, testVec)
+                else:
+                    classLabel = secondDict[key]
+    else:
+        secondDict = inputTree[firstStr]
+        featIndex = featLabels.index(firstStr)
+        for key in secondDict.keys():
+            if testVec[featIndex] == key:
+                if type(secondDict[key]).__name__ == 'dict':
+                    classLabel = classify(secondDict[key], featLabels, testVec)
+                else:
+                    classLabel = secondDict[key]
+    return classLabel
+
+
+# 测试决策树正确率
+def testing(myTree, data_test, labels):
+    error = 0.0
+    for i in range(len(data_test)):
+        if classify(myTree, labels, data_test[i]) != data_test[i][-1]:
+            error += 1
+            # print 'myTree %d' %error
+    return float(error)
+
+
+# 测试投票节点正确率
+def testingMajor(major, data_test):
+    error = 0.0
+    for i in range(len(data_test)):
+        if major != data_test[i][-1]:
+            error += 1
+            # print 'major %d' %error
+    return float(error)
+
+
+# 后剪枝
+def postPruningTree(inputTree, dataSet, data_test, labels):
+    firstStr = inputTree.keys()[0]
+    secondDict = inputTree[firstStr]
+    classList = [example[-1] for example in dataSet]
+    featkey = copy.deepcopy(firstStr)
+    if '<=' in firstStr:
+        featkey = re.compile("(.+<=)").search(firstStr).group()[:-2]
+        featvalue = float(re.compile("(<=.+)").search(firstStr).group()[2:])
+    labelIndex = labels.index(featkey)
+    temp_labels = copy.deepcopy(labels)
+    del (labels[labelIndex])
+    for key in secondDict.keys():
+        if type(secondDict[key]).__name__ == 'dict':
+            if type(dataSet[0][labelIndex]).__name__ == 'str':
+                inputTree[firstStr][key] = postPruningTree(secondDict[key], \
+                                                           splitDataSet(dataSet, labelIndex, key),
+                                                           splitDataSet(data_test, labelIndex, key),
+                                                           copy.deepcopy(labels))
+            else:
+                inputTree[firstStr][key] = postPruningTree(secondDict[key], \
+                                                           splitContinuousDataSet(dataSet, labelIndex, featvalue, key), \
+                                                           splitContinuousDataSet(data_test, labelIndex, featvalue,
+                                                                                  key), \
+                                                           copy.deepcopy(labels))
+    if testing(inputTree, data_test, temp_labels) <= testingMajor(majorityCnt(classList), data_test):
+        return inputTree
     return majorityCnt(classList)
 
 
-def store_tree(decesion_tree, filename):
-    '''
-    把决策树以二进制格式写入文件
-    :param decesion_tree:
-    :param filename:
-    :return:
-    '''
-    import pickle
-    writer = open(filename, 'w')
-    pickle.dump(decesion_tree, writer)
-    writer.close()
+
 
 
 df = pd.read_csv('csvtest.csv')
@@ -233,20 +241,10 @@ data = df.values[0:1941, 0:].tolist()
 data_full = data[:]
 data_test=df.values[1800:,0:].tolist()
 labels = df.columns.values[0:-1].tolist()
-print labels
 labels_full = labels[:]
 myTree = createTree(data, labels, data_full, labels_full)
-store_tree(myTree,'decesiontree2')
-# test_dataset, test_features = pd.read_csv('test.csv'),labels
-#
-# # print test_dataset,test_features
-# # n = len(test_dataset)
-# # correct = 0
-# # for test_data in test_dataset:
-# #     label = classify(myTree, test_features,test_data)
-# #     if label == test_data[-1]:
-# #         correct += 1
-# # print '准确率：', correct/float(n)
-
-import plotTree
-plotTree.createPlot(myTree)
+print myTree
+data = df.values[0:1941, 0:].tolist()
+data_full = data[:]
+data_test=df.values[1800:,0:].tolist()
+myTree2 = postPruningTree(myTree, data, data_test, labels)
